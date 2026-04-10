@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SHMELCO — Редактор постов</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cream: #F8F7ED;
+            --beige: #E4D0B9;
+            --chocolate: #462918;
+            --chocolate-light: rgba(70,41,24,0.6);
+            --chocolate-muted: rgba(70,41,24,0.12);
+            --chocolate-subtle: rgba(70,41,24,0.06);
+            --green-deep: #282C1E;
+            --white: #FFFFFF;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--cream); color:var(--chocolate); line-height:1.6; }
+
+        .header { padding:28px 40px; border-bottom:1px solid var(--chocolate-muted); display:flex; align-items:center; justify-content:space-between; }
+        .header-left { display:flex; align-items:center; gap:20px; }
+        .header-title { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:300; letter-spacing:0.02em; }
+        .header-divider { width:1px; height:18px; background:var(--chocolate-muted); }
+        .header-sub { font-size:11px; font-weight:400; letter-spacing:0.08em; text-transform:uppercase; color:var(--chocolate-light); }
+
+        .tabs { display:flex; gap:0; border-bottom:1px solid var(--chocolate-muted); padding:0 40px; }
+        .tab { padding:14px 28px; font-size:12px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; color:var(--chocolate-light); cursor:pointer; border-bottom:2px solid transparent; transition:all 0.2s; user-select:none; }
+        .tab:hover { color:var(--chocolate); }
+        .tab.active { color:var(--chocolate); border-bottom-color:var(--chocolate); }
+
+        .tab-content { display:none; }
+        .tab-content.active { display:block; }
+
+        /* EDITOR TAB */
+        .editor-wrap { max-width:1440px; margin:0 auto; padding:32px 40px 60px; display:grid; grid-template-columns:1fr 360px; gap:36px; }
+        .editor-main { background:var(--white); border-radius:4px; padding:32px; border:1px solid var(--chocolate-muted); }
+        .label { font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--chocolate-light); margin-bottom:12px; }
+        textarea { width:100%; min-height:400px; padding:20px; font-family:'Cormorant Garamond',serif; font-size:18px; line-height:1.8; color:var(--chocolate); border:1px solid var(--chocolate-muted); border-radius:2px; resize:vertical; background:var(--cream); transition:border-color 0.3s; }
+        textarea::placeholder { color:var(--beige); font-style:italic; }
+        textarea:focus { outline:none; border-color:var(--beige); }
+        .counts { display:flex; justify-content:space-between; margin-top:12px; font-size:12px; color:var(--chocolate-light); }
+        .counts span { font-weight:500; color:var(--chocolate); }
+
+        .selfcheck { margin-top:24px; padding-top:20px; border-top:1px solid var(--chocolate-subtle); }
+        .selfcheck-title { font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--chocolate-light); margin-bottom:14px; }
+        .selfcheck-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+        .selfcheck-item { display:flex; align-items:flex-start; gap:8px; padding:8px 10px; border-radius:2px; cursor:pointer; transition:background 0.15s; font-size:12px; line-height:1.5; }
+        .selfcheck-item:hover { background:var(--chocolate-subtle); }
+        .selfcheck-item input { margin-top:2px; accent-color:var(--chocolate); cursor:pointer; }
+        .selfcheck-item.missed { background:rgba(139,105,20,0.06); }
+        .selfcheck-item.hit { background:rgba(40,44,30,0.06); }
+
+        .check-btn { display:block; width:100%; padding:14px; margin-top:20px; font-family:'Inter',sans-serif; font-size:12px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; background:var(--chocolate); color:var(--cream); border:none; border-radius:2px; cursor:pointer; transition:all 0.25s; }
+        .check-btn:hover { background:var(--green-deep); }
+
+        .sidebar { position:sticky; top:20px; height:fit-content; display:flex; flex-direction:column; gap:20px; }
+        .panel { background:var(--white); border-radius:4px; border:1px solid var(--chocolate-muted); overflow:hidden; }
+        .panel-head { padding:14px 18px; border-bottom:1px solid var(--chocolate-subtle); display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none; }
+        .panel-label { font-size:10px; font-weight:500; letter-spacing:0.12em; text-transform:uppercase; color:var(--chocolate-light); }
+        .panel-toggle { font-size:13px; color:var(--chocolate-light); transition:transform 0.3s; }
+        .panel-toggle.collapsed { transform:rotate(-90deg); }
+        .panel-body { padding:10px 18px 18px; }
+        .panel-body.collapsed { display:none; }
+
+        .metrics-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+        .metric { padding:10px; background:var(--cream); border-radius:2px; }
+        .metric-label { font-size:9px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--chocolate-light); margin-bottom:2px; }
+        .metric-value { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:500; }
+        .metric.good .metric-value { color:var(--green-deep); }
+        .metric.warn .metric-value { color:#8B6914; }
+        .badges { display:flex; flex-wrap:wrap; gap:5px; margin-top:10px; }
+        .badge { padding:4px 9px; border-radius:2px; font-size:10px; letter-spacing:0.02em; }
+        .badge.pass { background:rgba(40,44,30,0.08); color:var(--green-deep); border:1px solid rgba(40,44,30,0.15); }
+        .badge.fail { background:rgba(139,105,20,0.06); color:#8B6914; border:1px solid rgba(139,105,20,0.15); }
+
+        /* RESULTS */
+        .results { display:none; grid-column:1/-1; }
+        .results.visible { display:block; }
+        .results-box { background:var(--white); border-radius:4px; border:1px solid var(--chocolate-muted); padding:28px 32px; margin-bottom:20px; }
+        .results-title { font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:400; margin-bottom:20px; }
+        .ex-card { padding:18px 22px; margin-bottom:14px; background:var(--cream); border-radius:4px; border-left:3px solid var(--beige); }
+        .ex-card:last-child { margin-bottom:0; }
+        .ex-rule { font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--chocolate-light); margin-bottom:10px; }
+        .ex-original { font-family:'Cormorant Garamond',serif; font-size:16px; line-height:1.6; color:var(--chocolate-light); padding:10px 14px; background:var(--white); border-radius:2px; margin-bottom:6px; text-decoration:line-through; text-decoration-color:var(--beige); }
+        .ex-arrow { text-align:center; font-size:13px; color:var(--beige); padding:3px 0; }
+        .ex-rewrite { margin-top:8px; }
+        .ex-rewrite textarea { min-height:60px; font-size:16px; padding:12px 14px; }
+        .ex-hint-btn { margin-top:8px; font-size:11px; color:var(--chocolate-light); background:none; border:1px solid var(--chocolate-muted); padding:5px 12px; border-radius:2px; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.2s; }
+        .ex-hint-btn:hover { border-color:var(--beige); color:var(--chocolate); }
+        .ex-hint { display:none; margin-top:8px; font-size:12px; color:var(--chocolate-light); line-height:1.5; font-style:italic; padding:10px 14px; background:rgba(228,208,185,0.15); border-radius:2px; }
+        .ex-hint.visible { display:block; }
+        .ex-tip { font-size:12px; color:var(--chocolate-light); margin-top:8px; line-height:1.5; }
+        .clean-msg { text-align:center; padding:36px 20px; color:var(--chocolate-light); }
+        .clean-msg-icon { font-size:28px; margin-bottom:10px; opacity:0.4; }
+        .clean-msg-text { font-family:'Cormorant Garamond',serif; font-size:18px; }
+
+        /* SIMULATOR TAB */
+        .sim-wrap { max-width:800px; margin:0 auto; padding:40px 40px 80px; }
+        .sim-card { background:var(--white); border-radius:4px; border:1px solid var(--chocolate-muted); padding:36px 40px; margin-bottom:24px; }
+        .sim-rule-num { font-family:'Cormorant Garamond',serif; font-size:42px; font-weight:300; color:var(--beige); line-height:1; margin-bottom:4px; }
+        .sim-rule-text { font-size:13px; font-weight:500; letter-spacing:0.04em; color:var(--chocolate); margin-bottom:24px; }
+        .sim-prompt { font-family:'Cormorant Garamond',serif; font-size:20px; line-height:1.6; color:var(--chocolate); margin-bottom:8px; }
+        .sim-constraint { font-size:12px; color:var(--chocolate-light); margin-bottom:20px; padding:10px 14px; background:rgba(228,208,185,0.12); border-radius:2px; border-left:2px solid var(--beige); }
+        .sim-source { font-family:'Cormorant Garamond',serif; font-size:17px; line-height:1.6; color:var(--chocolate-light); padding:14px 18px; background:var(--cream); border-radius:2px; margin-bottom:20px; font-style:italic; }
+        .sim-textarea { width:100%; min-height:140px; padding:18px; font-family:'Cormorant Garamond',serif; font-size:17px; line-height:1.7; color:var(--chocolate); border:1px solid var(--chocolate-muted); border-radius:2px; resize:vertical; background:var(--cream); }
+        .sim-textarea:focus { outline:none; border-color:var(--beige); }
+        .sim-textarea::placeholder { color:var(--beige); font-style:italic; }
+        .sim-actions { display:flex; gap:10px; margin-top:16px; }
+        .sim-btn { padding:12px 24px; font-family:'Inter',sans-serif; font-size:12px; font-weight:500; letter-spacing:0.08em; text-transform:uppercase; border:none; border-radius:2px; cursor:pointer; transition:all 0.2s; }
+        .sim-btn-primary { background:var(--chocolate); color:var(--cream); }
+        .sim-btn-primary:hover { background:var(--green-deep); }
+        .sim-btn-secondary { background:none; color:var(--chocolate-light); border:1px solid var(--chocolate-muted); }
+        .sim-btn-secondary:hover { border-color:var(--beige); color:var(--chocolate); }
+        .sim-hint { display:none; margin-top:16px; font-size:13px; color:var(--chocolate-light); line-height:1.6; padding:14px 18px; background:rgba(228,208,185,0.15); border-radius:2px; }
+        .sim-hint.visible { display:block; }
+        .sim-compare { display:none; margin-top:20px; }
+        .sim-compare.visible { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .sim-compare-col { padding:14px 18px; border-radius:2px; }
+        .sim-compare-label { font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--chocolate-light); margin-bottom:8px; }
+        .sim-compare-text { font-family:'Cormorant Garamond',serif; font-size:16px; line-height:1.6; }
+        .sim-before { background:rgba(139,105,20,0.04); border:1px solid rgba(139,105,20,0.1); }
+        .sim-after { background:rgba(40,44,30,0.04); border:1px solid rgba(40,44,30,0.1); }
+        .sim-progress { display:flex; gap:4px; margin-bottom:24px; }
+        .sim-dot { width:28px; height:4px; border-radius:2px; background:var(--chocolate-muted); }
+        .sim-dot.done { background:var(--green-deep); }
+        .sim-dot.current { background:var(--beige); }
+
+        .footer { padding:36px 40px; display:flex; justify-content:center; align-items:center; flex-direction:column; gap:10px; border-top:1px solid var(--chocolate-muted); }
+        .footer-logo { opacity:0.4; transition:opacity 0.3s; }
+        .footer-logo:hover { opacity:0.7; }
+        .footer-text { font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--chocolate-light); }
+
+        @media(max-width:1024px) {
+            .editor-wrap { grid-template-columns:1fr; padding:20px; }
+            .sidebar { position:static; }
+            .tabs { padding:0 20px; }
+            .sim-wrap { padding:20px; }
+            .sim-compare.visible { grid-template-columns:1fr; }
+            .selfcheck-grid { grid-template-columns:1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <div class="header-title">Редактор постов</div>
+            <div class="header-divider"></div>
+            <div class="header-sub">product atelier</div>
+        </div>
+    </div>
+
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('editor')">Написать пост</div>
+        <div class="tab" onclick="switchTab('sim')">Потренироваться</div>
+    </div>
+
+    <!-- ========== EDITOR TAB ========== -->
+    <div class="tab-content active" id="tab-editor">
+        <div class="editor-wrap">
+            <div>
+                <div class="editor-main">
+                    <div class="label">Текст поста</div>
+                    <textarea id="postText" placeholder="Начни с действия, с сути, с детали..."></textarea>
+                    <div class="counts">
+                        <div><span id="charC">0</span> символов &middot; <span id="wordC">0</span> слов</div>
+                        <div><span id="paraC">0</span> абзацев &middot; <span id="sentC">0</span> предл.</div>
+                    </div>
+
+                    <div class="selfcheck">
+                        <div class="selfcheck-title">Самопроверка — отметь, что применила</div>
+                        <div class="selfcheck-grid" id="selfcheckGrid"></div>
+                    </div>
+
+                    <button class="check-btn" onclick="checkText()">Проверить текст</button>
+                </div>
+
+                <div class="results" id="resultsSection">
+                    <div class="results-box">
+                        <div class="results-title">Разбор</div>
+                        <div id="resultsBody"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="panel">
+                    <div class="panel-head" onclick="tog('metrics')">
+                        <div class="panel-label">Метрики</div>
+                        <div class="panel-toggle" id="metricsToggle">▾</div>
+                    </div>
+                    <div class="panel-body" id="metricsBody">
+                        <div class="metrics-grid">
+                            <div class="metric" id="mVerb"><div class="metric-label">Глаголы</div><div class="metric-value">—</div></div>
+                            <div class="metric" id="mAdj"><div class="metric-label">Прилаг.</div><div class="metric-value">—</div></div>
+                            <div class="metric" id="mPara"><div class="metric-label">Сл/абзац</div><div class="metric-value">—</div></div>
+                            <div class="metric" id="mSent"><div class="metric-label">Сл/предл.</div><div class="metric-value">—</div></div>
+                        </div>
+                        <div class="badges" id="badges"></div>
+                    </div>
+                </div>
+                <div class="panel">
+                    <div class="panel-head" onclick="tog('rules')">
+                        <div class="panel-label">16 правил</div>
+                        <div class="panel-toggle" id="rulesToggle">▾</div>
+                    </div>
+                    <div class="panel-body" id="rulesBody" style="max-height:400px;overflow-y:auto;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SIMULATOR TAB ========== -->
+    <div class="tab-content" id="tab-sim">
+        <div class="sim-wrap">
+            <div class="sim-progress" id="simProgress"></div>
+            <div class="sim-card" id="simCard"></div>
+            <div class="sim-actions">
+                <button class="sim-btn sim-btn-secondary" onclick="simHint()">Подсказка</button>
+                <button class="sim-btn sim-btn-secondary" onclick="simCompare()">Сравнить</button>
+                <button class="sim-btn sim-btn-primary" onclick="simNext()">Следующее</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-logo">
+            <svg width="160" height="22" viewBox="0 0 1358 183" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1096.23 119.023L1110.25 158.46L1110.46 159.066H1102.63L1102.53 158.762L1099.28 149.433H1080.97L1077.72 158.762L1077.62 159.066H1069.79L1070 158.461L1083.97 119.023L1084.08 118.721H1096.12L1096.23 119.023ZM1142.82 125.192H1130.69V159.066H1123.07V125.192H1110.89V118.721H1142.82V125.192ZM1178.73 125.192H1158.49V135.388H1173.66V141.883H1158.49V152.595H1178.73V159.066H1150.86V118.721H1178.73V125.192ZM1195.43 152.595H1213.12V159.066H1187.8V118.721H1195.43V152.595ZM1228.17 159.066H1220.55V118.721H1228.17V159.066ZM1266.21 125.192H1245.99V135.388H1261.14V141.883H1245.99V152.595H1266.21V159.066H1238.37V118.721H1266.21V125.192ZM1291.2 118.721C1294.38 118.721 1297.08 119.242 1299.21 120.366L1299.6 120.58C1301.4 121.598 1302.79 122.915 1303.79 124.532L1304 124.882C1305.04 126.792 1305.58 128.828 1305.58 131.062C1305.58 132.535 1305.32 134.007 1304.81 135.427C1304.3 136.885 1303.49 138.237 1302.34 139.457C1301.21 140.695 1299.7 141.661 1297.86 142.391C1297.54 142.52 1297.21 142.628 1296.88 142.722L1306.34 158.378L1306.76 159.066H1298.15L1298.01 158.841L1289.05 143.453H1282.9V159.066H1275.28V118.721H1291.2ZM1083.23 143.011H1097.05L1090.84 125.192H1089.45L1083.23 143.011ZM1282.9 136.982H1291.2C1292.79 136.982 1294.07 136.719 1295.02 136.267C1295.97 135.79 1296.68 135.12 1297.15 134.254C1297.65 133.371 1297.9 132.299 1297.9 131.062C1297.9 129.198 1297.35 127.782 1296.28 126.757C1295.24 125.743 1293.57 125.192 1291.2 125.192H1282.9V136.982Z" fill="#462918"/>
+                <path d="M91.9237 128.292C91.9237 136.479 89.8647 143.783 85.6733 150.303C81.531 156.774 75.6728 161.897 68.0498 165.721C60.4514 169.545 51.3333 171.481 40.72 171.481C36.4795 171.481 32.2146 171.113 27.9006 170.353C23.5377 169.594 19.4443 168.589 15.5225 167.241C11.6008 165.892 7.99763 164.275 4.73765 162.265C4.07585 161.726 3.51209 161.186 3.14443 160.5C2.70323 159.838 2.53165 158.809 2.53165 157.534L0.0315143 121.821C-0.115552 121.013 0.252114 120.522 1.13451 120.473C2.09045 120.375 2.58067 120.694 2.75225 121.331C4.24743 126.503 6.1838 131.748 8.65943 137.018C11.086 142.362 14.0274 147.215 17.4589 151.651C20.8905 156.063 25.0328 159.691 29.837 162.485C34.6412 165.353 40.2297 166.75 46.6516 166.75C51.0146 166.75 55.3286 165.892 59.471 164.275C63.6624 162.583 67.0449 159.789 69.6431 155.916C72.2412 151.97 73.5648 146.529 73.5648 139.568C73.5648 131.577 71.8491 124.836 68.4175 119.346C65.0105 113.831 60.574 109.1 55.206 105.105C49.7891 101.11 44.1025 97.2858 38.0237 93.6582C32.3372 90.006 26.7976 86.1823 21.4787 82.187C16.1843 78.1917 11.9194 73.5591 8.65943 68.3137C5.35043 63.0928 3.73269 56.7199 3.73269 49.2195C3.73269 40.224 6.06125 32.8216 10.7184 27.0125C15.351 21.1788 21.3317 16.8649 28.6115 14.0706C35.8668 11.2028 43.3181 9.80566 51.0146 9.80566C56.0884 9.80566 61.2358 10.2959 66.4811 11.3008C71.6775 12.2813 76.4326 13.752 80.6976 15.5168C82.1437 16.2276 83.1242 16.9139 83.6389 17.6737C84.1291 18.4336 84.3497 19.1934 84.3497 20.0513L84.889 45.788C84.889 46.3272 84.4478 46.6459 83.6389 46.7929C82.9771 46.9645 82.4134 46.7439 82.1928 46.3272L81.4819 44.1702C75.5503 28.5076 64.0055 17.3061 51.946 14.4873C51.848 14.4873 51.7745 14.4383 51.7254 14.4383C50.0097 14.1686 48.2449 14.0706 46.3575 14.0706C43.7103 14.0706 41.2837 14.3402 39.0777 14.8795C36.4795 15.4187 34.2 16.3746 32.1656 17.6737C28.3909 20.0513 25.5231 23.2378 23.5867 27.1595C22.4837 29.39 21.6503 31.7431 21.2091 34.3413V34.3903C20.8169 36.3267 20.6699 38.3366 20.6699 40.4936C20.6699 47.1851 22.2631 52.8962 25.5231 57.7004C28.783 62.5536 33.048 66.8185 38.2934 70.5932C43.4897 74.2944 49.0782 78.0201 54.9364 81.6477C61.0152 85.2999 66.8243 89.2462 72.4618 93.3886C72.903 93.7317 73.3442 94.0504 73.7854 94.4671C78.8102 98.3153 83.0261 102.825 86.4577 107.973C90.0853 113.561 91.9237 120.302 91.9237 128.292Z" fill="#462918"/>
+                <path d="M241.907 166.994C241.907 167.999 241.711 168.49 241.319 168.49C238.255 168.49 234.628 168.416 230.485 168.244C226.318 168.073 222.078 167.999 217.715 167.999C212.739 167.999 205.263 168.073 201.219 168.244C197.199 168.416 193.645 168.49 190.581 168.49C190.189 168.49 189.993 167.999 189.993 166.994V148.268C142.883 153.097 143.275 156.749 144.035 159.249C144.819 161.749 146.412 163.416 148.839 164.249C151.265 165.082 154.844 165.499 159.599 165.499C159.844 165.499 159.967 165.989 159.967 166.994Z" fill="#462918"/>
+                <path d="M554.154 131.061C553.492 135.547 552.904 140.964 552.413 147.287C551.923 153.611 551.678 159.42 551.678 164.739C551.678 167.239 550.428 168.49 547.217 168.49H441.746" fill="#462918"/>
+                <path d="M673.278 130.718C672.861 135.522 672.543 138.978 672.126 145.792C671.685 152.606 671.489 158.93 671.489 164.739C671.489 167.239 670.435 168.49 669.675 168.49H571.557" fill="#462918"/>
+                <path d="M804.609 131.062L802.551 156.75C802.281 158.76 801.962 160.059 801.619 160.623" fill="#462918"/>
+                <path d="M953.662 59.7103C950.696 50.2245 946.382 41.7436 940.72 34.2678C935.058 26.7674 928.17 20.8357 920.106 16.4237" fill="#462918"/>
+                <path d="M1017.66 183H1011.04V0H1017.66V183Z" fill="#462918"/>
+            </svg>
+        </div>
+        <div class="footer-text">product atelier</div>
+    </div>
+
+<script>
+const RULES = [
+    "Один текст — одна идея",
+    "Начать с действия",
+    "Рисовать картинку (сенсорика)",
+    "Начать с сути, от частного к общему",
+    "Последнее предложение — подпись",
+    "Смена регистра / настроения",
+    "Афоризмы, интересные слова",
+    "Концовку — до написания",
+    "Без канцеляризмов и клише",
+    "Короткие абзацы",
+    "Истории и примеры из жизни",
+    "Польза: совет, лайфхак, инсайт",
+    "Затащить читателя в свою реальность",
+    "Показывать, не рассказывать",
+    "Объединять слова из разных сфер",
+    "Детали. Деталь, которая раскроется"
+];
+
+const CANCEL = {
+    'осуществлять':'делать','является':'— или убрать','необходимо':'нужно / стоит',
+    'следует':'стоит','в настоящее время':'сейчас','в данный момент':'сейчас',
+    'производить':'делать','имеет место':'есть','принимать решение':'решить',
+    'оказывать влияние':'влиять','в рамках':'внутри / в','на сегодняшний день':'сейчас',
+    'данный':'этот','в целях':'чтобы','представляет собой':'— это',
+    'обеспечивать':'давать','в соответствии с':'по','вышеуказанный':'этот',
+    'на самом деле':'убрать','стоит отметить':'убрать — просто скажи',
+    'важно отметить':'убрать','нужно понимать что':'убрать','каждый из нас':'ты / мы'
+};
+
+const TELL_SHOW = {
+    'разозлился':'сжал кулаки / кинул телефон на стол','обрадовался':'улыбнулся до ушей / подпрыгнул',
+    'расстроился':'опустил глаза / замолчал','испугался':'отступил на шаг / перехватило дыхание',
+    'удивился':'приоткрыл рот / замер','устал':'упал на диван / глаза закрывались',
+    'волновался':'мял салфетку / проверял телефон','нервничал':'барабанил пальцами / кусал губу',
+    'обиделся':'отвернулся / ответил «нормально»'
+};
+
+const EXERCISES = [
+    { rule:0, prompt:'У тебя 3 мысли. Выбери одну и напиши 3 предложения только о ней.', source:'Идеи: 1) Почему клиенты уходят. 2) Как найти свою нишу. 3) Зачем нужен бренд.', constraint:'Только одна мысль. Три предложения. Не больше.', hint:'Какая из трёх вызывает у тебя самый сильный отклик прямо сейчас? Начни с неё.' },
+    { rule:1, prompt:'Перепиши это предложение. Начни с глагола.', source:'Я всегда думала, что создание продукта — это очень сложный и непредсказуемый процесс.', constraint:'Первое слово — глагол. Не «Я», не «Это», не «Мне».', hint:'Попробуй: «Открыла...», «Запустила...», «Села...» — и дальше продолжи мысль.' },
+    { rule:2, prompt:'Опиши своё рабочее место прямо сейчас. Используй 3 разных органа чувств.', source:'', constraint:'Минимум 3 из 5: зрение, слух, осязание, обоняние, вкус.', hint:'Что видишь? Какой звук слышишь? Что чувствуешь руками (клавиши, чашка, ткань)?'},
+    { rule:3, prompt:'Начни с конкретного примера, потом обобщи.', source:'Успех — это не результат, а процесс. Каждый день ты делаешь маленькие шаги.', constraint:'Первое предложение — конкретная сцена / случай. Второе — вывод.', hint:'Вместо абстракции начни: «Вчера в 11 вечера я...» или «Клиентка написала мне в 6 утра...»' },
+    { rule:8, prompt:'Перепиши без канцеляризмов. Ни одного.', source:'В настоящее время осуществляется процесс разработки нового продукта, который является инновационным решением для данной целевой аудитории.', constraint:'Ни одного слова из канцелярского языка. Как будто рассказываешь подруге.', hint:'О чём это предложение? «Мы делаем новый продукт для...» — и всё.' },
+    { rule:9, prompt:'Разбей эту стену на 3 коротких абзаца.', source:'Когда я начинала свой первый проект, мне казалось, что нужно всё продумать до мелочей, прежде чем начать, и я тратила недели на планирование, а потом ещё недели на сомнения, а потом ещё недели на то, чтобы убедить себя, что всё это имеет смысл, и в итоге я так ничего и не запустила, пока однажды просто не решила сделать первый шаг без подготовки.', constraint:'3 абзаца. Каждый — максимум 2 предложения.', hint:'Найди 2 места, где меняется мысль или настроение. Там и ставь разрыв.' },
+    { rule:10, prompt:'Расскажи историю из своего опыта в 4 предложениях.', source:'', constraint:'Структура: ситуация → действие → результат → вывод.', hint:'Вспомни момент с клиентом или проектом, который тебя удивил. Начни: «Однажды...»' },
+    { rule:13, prompt:'Перепиши, заменив эмоции-ярлыки на действия.', source:'Клиент был очень доволен результатом и сильно обрадовался. Он чувствовал себя уверенным и мотивированным.', constraint:'Ни одного слова-эмоции. Только то, что можно увидеть глазами.', hint:'Что ДЕЛАЛ человек, когда был доволен? Написал отзыв в 2 часа ночи? Позвонил маме? Заказал шампанское?' },
+    { rule:14, prompt:'Возьми обычную фразу и добавь неожиданное слово из другой сферы.', source:'Мы собрали бренд-стратегию для клиента.', constraint:'Одно слово / метафора из неожиданной области: кулинария, спорт, физика, природа.', hint:'«Собрали» → «сварили», «вырастили», «отлили». Или стратегия не собрана, а «проросла из разговора».' },
+    { rule:15, prompt:'Добавь одну маленькую деталь, которая оживит текст.', source:'Мы созвонились с клиентом и обсудили проект.', constraint:'Одна деталь: время, предмет, звук, жест — что-то, что рисует картинку.', hint:'«Созвонились в 11 вечера», «она держала кружку с надписью BOSS», «за окном шёл дождь» — любая мелочь.' },
+];
+
+// ========== TABS ==========
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.tab:nth-child(${name==='editor'?1:2})`).classList.add('active');
+    document.getElementById('tab-' + (name==='editor'?'editor':'sim')).classList.add('active');
+}
+
+// ========== SELFCHECK ==========
+const selfcheckGrid = document.getElementById('selfcheckGrid');
+RULES.forEach((r, i) => {
+    const el = document.createElement('label');
+    el.className = 'selfcheck-item';
+    el.innerHTML = `<input type="checkbox" data-rule="${i}"> ${r}`;
+    selfcheckGrid.appendChild(el);
+});
+
+// ========== RULES LIST ==========
+const rulesBody = document.getElementById('rulesBody');
+RULES.forEach((r, i) => {
+    const d = document.createElement('div');
+    d.style.cssText = 'padding:6px 8px;font-size:12px;line-height:1.5;border-left:2px solid transparent;margin-bottom:2px;border-radius:2px;cursor:default;';
+    d.innerHTML = `<span style="font-family:Cormorant Garamond,serif;font-weight:600;font-size:14px;color:var(--beige);margin-right:5px;">${i+1}</span>${r}`;
+    rulesBody.appendChild(d);
+});
+
+// ========== COUNTS ==========
+const ta = document.getElementById('postText');
+ta.addEventListener('input', updateCounts);
+
+function getSentences(t) { return t.split(/(?<=[.!?])\s+/).filter(s=>s.trim()); }
+
+function updateCounts() {
+    const t = ta.value, w = t.trim()?t.trim().split(/\s+/).length:0;
+    const p = t.split('\n\n').filter(x=>x.trim()), s = getSentences(t);
+    document.getElementById('charC').textContent = t.length;
+    document.getElementById('wordC').textContent = w;
+    document.getElementById('paraC').textContent = p.length;
+    document.getElementById('sentC').textContent = s.length;
+
+    if(!t.trim()){ resetM(); return; }
+    const vb=(t.match(/\b\w+(ть|ет|ут|ать|ять|ить|ыть|ал|ала|али|ил|ила|или|ю|ёт|ют)\b/gi)||[]).length;
+    const aj=(t.match(/\b\w+(ый|ая|ое|ые|ий|ья|ье|ьи|ой|ого|ому|ым|ом)\b/gi)||[]).length;
+    const vp=w?Math.round(vb/w*100):0, ap=w?Math.round(aj/w*100):0;
+    const avgP=p.length?Math.round(w/p.length):0, avgS=s.length?Math.round(w/s.length):0;
+    setM('mVerb',vp+'%',vp>=15); setM('mAdj',ap+'%',ap<=15);
+    setM('mPara',avgP,avgP<=50); setM('mSent',avgS,avgS<=20);
+}
+
+function setM(id,v,ok){ const e=document.getElementById(id); e.querySelector('.metric-value').textContent=v; e.classList.remove('good','warn'); e.classList.add(ok?'good':'warn'); }
+function resetM(){ ['mVerb','mAdj','mPara','mSent'].forEach(id=>{ const e=document.getElementById(id); e.classList.remove('good','warn'); e.querySelector('.metric-value').textContent='—'; }); document.getElementById('badges').innerHTML=''; document.getElementById('resultsSection').classList.remove('visible'); }
+
+function tog(n){ document.getElementById(n+'Body').classList.toggle('collapsed'); document.getElementById(n+'Toggle').classList.toggle('collapsed'); }
+
+// ========== CHECK TEXT ==========
+function checkText() {
+    const text = ta.value.trim();
+    if(!text) return;
+
+    const tl = text.toLowerCase();
+    const sents = getSentences(text);
+    const paras = text.split('\n\n').filter(p=>p.trim());
+    const words = text.split(/\s+/).length;
+    const examples = [];
+    const detected = new Set();
+
+    // Канцеляризмы
+    for(const [w,r] of Object.entries(CANCEL)){
+        if(tl.includes(w)){
+            detected.add(8);
+            const s = sents.find(x=>x.toLowerCase().includes(w));
+            if(s) examples.push({ rule:'Правило 9 — Канцеляризм', original:s.trim(), hint:`«${w}» → «${r}»`, ruleIdx:8 });
+        }
+    }
+    // Рассказ vs показ
+    for(const [tell,show] of Object.entries(TELL_SHOW)){
+        if(tl.includes(tell)){
+            detected.add(13);
+            const s = sents.find(x=>x.toLowerCase().includes(tell));
+            if(s) examples.push({ rule:'Правило 14 — Показывать', original:s.trim(), hint:`Вместо «${tell}» покажи действие: ${show}`, ruleIdx:13 });
+        }
+    }
+    // Длинные предложения
+    sents.forEach(s=>{ if(s.trim().split(/\s+/).length>25){ detected.add(9); examples.push({ rule:'Правило 10 — Короче!', original:s.trim(), hint:`${s.trim().split(/\s+/).length} слов. Разбей на 2 предложения — найди место, где меняется мысль.`, ruleIdx:9 }); }});
+    // Начало
+    if(sents.length>0){
+        const f=sents[0].trim().split(/\s+/).slice(0,5).join(' ');
+        if(!/\b\w+(ть|ет|ал|ил|ала|ила|ю|ёт|ют)\b/i.test(f)){ detected.add(1); examples.push({ rule:'Правило 2 — Начать с действия', original:sents[0].trim().slice(0,90)+(sents[0].length>90?'...':''), hint:'Перепиши первое предложение, начав с глагола. Не «Я думаю...», а «Открыла ноутбук...»', ruleIdx:1 }); }
+    }
+    // Однотипные начала
+    const starts=sents.map(s=>s.trim().split(/\s+/)[0]?.toLowerCase()), sc={};
+    starts.forEach(s=>{if(s) sc[s]=(sc[s]||0)+1;});
+    for(const [w,c] of Object.entries(sc)){ if(c>=3){ examples.push({ rule:'Стиль — Разнообразие', original:`«${w}» начинает ${c} предложений`, hint:'Варьируй: вопрос, деталь, цитата, действие — каждый раз по-разному.' }); break; }}
+    // Длинные абзацы
+    paras.forEach((p,i)=>{ const wc=p.trim().split(/\s+/).length; if(wc>60){ detected.add(9); examples.push({ rule:'Правило 10 — Абзацы', original:p.trim().split(/\s+/).slice(0,12).join(' ')+'...', hint:`Абзац ${i+1}: ${wc} слов. Найди где меняется мысль — поставь разрыв.`, ruleIdx:9 }); }});
+    // Сенсорика
+    const sens=['увидел','услышал','почувствовал','потрогал','запах','вкус','звук','тёплый','теплый','холодный','яркий','тихий','шёпот','тишина','дождь','ветер','свет'];
+    const hasSens = sens.some(w=>tl.includes(w));
+    if(!hasSens && text.length>150){ detected.add(2); examples.push({ rule:'Правило 3 — Сенсорика', original:'В тексте нет ни одной сенсорной детали', hint:'Добавь одну: запах кофе, скрип двери, тёплая чашка, тишина в комнате — одна деталь оживляет всё.' }); }
+
+    // Selfcheck: подсветить что отметила vs что нашлось
+    const checked = new Set();
+    selfcheckGrid.querySelectorAll('input:checked').forEach(cb => checked.add(+cb.dataset.rule));
+    selfcheckGrid.querySelectorAll('.selfcheck-item').forEach(el => {
+        el.classList.remove('missed','hit');
+        const idx = +el.querySelector('input').dataset.rule;
+        if(detected.has(idx) && !checked.has(idx)) el.classList.add('missed');
+        if(detected.has(idx) && checked.has(idx)) el.classList.add('hit');
+    });
+
+    // Badges
+    const badges = document.getElementById('badges');
+    const checks = [
+        {label:'Начало с действия',pass:!detected.has(1)},
+        {label:'Без канцеляризмов',pass:!detected.has(8)},
+        {label:'Короткие абзацы',pass:paras.every(p=>p.trim().split(/\s+/).length<=50)},
+        {label:'Сенсорика',pass:hasSens}
+    ];
+    badges.innerHTML = checks.map(c=>`<div class="badge ${c.pass?'pass':'fail'}">${c.label}</div>`).join('');
+
+    // Render results
+    const body = document.getElementById('resultsBody');
+    const section = document.getElementById('resultsSection');
+
+    if(!examples.length){
+        body.innerHTML = `<div class="clean-msg"><div class="clean-msg-icon">&#10003;</div><div class="clean-msg-text">Текст чистый. Поздравляю.</div></div>`;
+    } else {
+        body.innerHTML = examples.map((ex,i) => `
+            <div class="ex-card">
+                <div class="ex-rule">${ex.rule}</div>
+                <div class="ex-original">${ex.original}</div>
+                <div class="ex-rewrite">
+                    <textarea class="sim-textarea" id="rewrite-${i}" placeholder="Перепиши здесь..." style="min-height:70px;"></textarea>
+                </div>
+                <button class="ex-hint-btn" onclick="document.getElementById('hint-${i}').classList.toggle('visible')">Показать подсказку</button>
+                <div class="ex-hint" id="hint-${i}">${ex.hint}</div>
+            </div>
+        `).join('');
+    }
+
+    section.classList.add('visible');
+    section.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ========== SIMULATOR ==========
+let simIdx = 0;
+let simDone = new Set();
+
+function renderSim() {
+    const ex = EXERCISES[simIdx];
+    const card = document.getElementById('simCard');
+    card.innerHTML = `
+        <div class="sim-rule-num">${ex.rule+1}</div>
+        <div class="sim-rule-text">${RULES[ex.rule]}</div>
+        <div class="sim-prompt">${ex.prompt}</div>
+        <div class="sim-constraint">${ex.constraint}</div>
+        ${ex.source ? `<div class="sim-source">${ex.source}</div>` : ''}
+        <textarea class="sim-textarea" id="simAnswer" placeholder="Пиши здесь..."></textarea>
+        <div class="sim-hint" id="simHintBox">${ex.hint}</div>
+        <div class="sim-compare" id="simCompareBox">
+            ${ex.source ? `<div class="sim-compare-col sim-before"><div class="sim-compare-label">Было</div><div class="sim-compare-text">${ex.source}</div></div>` : ''}
+            <div class="sim-compare-col sim-after"><div class="sim-compare-label">Твоя версия</div><div class="sim-compare-text" id="simCompareAnswer">—</div></div>
+        </div>
+    `;
+    renderProgress();
+}
+
+function renderProgress() {
+    const prog = document.getElementById('simProgress');
+    prog.innerHTML = EXERCISES.map((_, i) => `<div class="sim-dot ${simDone.has(i)?'done':i===simIdx?'current':''}"></div>`).join('');
+}
+
+function simHint() { document.getElementById('simHintBox')?.classList.toggle('visible'); }
+
+function simCompare() {
+    const answer = document.getElementById('simAnswer')?.value || '';
+    if(!answer.trim()) return;
+    simDone.add(simIdx);
+    const box = document.getElementById('simCompareBox');
+    const ansEl = document.getElementById('simCompareAnswer');
+    if(ansEl) ansEl.textContent = answer;
+    box?.classList.add('visible');
+    renderProgress();
+}
+
+function simNext() {
+    simDone.add(simIdx);
+    simIdx = (simIdx + 1) % EXERCISES.length;
+    renderSim();
+}
+
+renderSim();
+updateCounts();
+</script>
+</body>
+</html>
