@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактор постов</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+        }
+
+        .editor-section {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 24px;
+            color: #1d1d1f;
+        }
+
+        .textarea-wrapper {
+            position: relative;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 500px;
+            padding: 20px;
+            font-size: 16px;
+            line-height: 1.7;
+            border: 2px solid #e5e5e7;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #007aff;
+        }
+
+        .char-count {
+            margin-top: 12px;
+            font-size: 14px;
+            color: #86868b;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+
+        .rules-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .rules-panel h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1d1d1f;
+        }
+
+        .rule-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f5f5f7;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.5;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+
+        .rule-item:hover {
+            background: #e8e8ed;
+            border-left-color: #007aff;
+        }
+
+        .rule-item.active {
+            background: #e3f2ff;
+            border-left-color: #007aff;
+        }
+
+        .rule-number {
+            font-weight: 600;
+            color: #007aff;
+            margin-right: 4px;
+        }
+
+        .analysis-panel {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+        }
+
+        .analysis-panel h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: #1d1d1f;
+        }
+
+        .metric {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: #f5f5f7;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .metric-label {
+            color: #86868b;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .metric-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .metric.warning .metric-value {
+            color: #ff9500;
+        }
+
+        .metric.error .metric-value {
+            color: #ff3b30;
+        }
+
+        .metric.success .metric-value {
+            color: #34c759;
+        }
+
+        .suggestions {
+            margin-top: 16px;
+            padding: 16px;
+            background: #fff3cd;
+            border-left: 3px solid #ff9500;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .suggestions strong {
+            display: block;
+            margin-bottom: 8px;
+            color: #1d1d1f;
+        }
+
+        .suggestions ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .suggestions li {
+            padding: 4px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .suggestions li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #ff9500;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+            }
+        }
+
+        .quick-checks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .check-badge {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .check-badge.pass {
+            background: #d1f4e0;
+            color: #0f7c39;
+        }
+
+        .check-badge.fail {
+            background: #ffd7d5;
+            color: #c41e1a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="editor-section">
+            <h1>Редактор постов</h1>
+            <div class="textarea-wrapper">
+                <textarea id="postText" placeholder="Начните писать свой пост..."></textarea>
+            </div>
+            <div class="char-count">
+                <span id="charCount">0</span> символов
+                <span style="margin-left: 20px;"><span id="wordCount">0</span> слов</span>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="rules-panel">
+                <h2>Правила</h2>
+                <div id="rulesList"></div>
+            </div>
+
+            <div class="analysis-panel">
+                <h2>Анализ текста</h2>
+                <div class="metric" id="paragraphMetric">
+                    <div class="metric-label">Абзацы</div>
+                    <div class="metric-value">0</div>
+                </div>
+                <div class="metric" id="sentenceMetric">
+                    <div class="metric-label">Предложения</div>
+                    <div class="metric-value">0</div>
+                </div>
+                <div class="metric" id="verbMetric">
+                    <div class="metric-label">Глаголы</div>
+                    <div class="metric-value">0%</div>
+                </div>
+                <div class="metric" id="adjectiveMetric">
+                    <div class="metric-label">Прилагательные</div>
+                    <div class="metric-value">0%</div>
+                </div>
+
+                <div class="quick-checks" id="quickChecks"></div>
+
+                <div id="suggestions" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const rules = [
+            "Один текст — одна идея. Идея должна быть подкреплена тезисами.",
+            "Начните текст с действия. Используйте больше глаголов и меньше прилагательных.",
+            "Рисуйте читателю картинку и используйте все органы чувств: увидел, услышал, потрогал, понюхал, попробовал на вкус.",
+            "Начните текст с сути. Начните с частного и идите к обобщению.",
+            "Последнее предложение — это ваша фирменная подпись.",
+            "Прием: смена настроения или смена регистра. Если было грустно — закончить шуткой.",
+            "Добавлять афоризмы, интересные слова, смешные выражения.",
+            "Создавать концовку ДО написания текста.",
+            "Убрать канцеляризмы и клише.",
+            "Абзацы должны быть короткими.",
+            "Добавлять примеры и истории из жизни. Запоминаются только истории.",
+            "В тексте должна была польза — совет, лайфхак, инсайт. Как это касается жизни моих подписчиков?",
+            "Любой пост должен затащить читателя в твою реальность. Пригласить читателя в гости в свой клуб.",
+            "Правило: не рассказывать, а показывать. «Иван разозлился» — нет. «Иван кинул телефон в стену».",
+            "Объединение слов из разных сфер создает эффект.",
+            "Прием: обращать внимание на детали. Мелкие детали интересны. Дать в начале текста деталь, которая раскроется."
+        ];
+
+        const cancelWords = [
+            'осуществлять', 'осуществление', 'в настоящее время', 'в данный момент',
+            'является', 'необходимо', 'следует', 'производить', 'производство',
+            'имеет место', 'принимать решение', 'оказывать влияние', 'достигать цели'
+        ];
+
+        const textarea = document.getElementById('postText');
+        const charCount = document.getElementById('charCount');
+        const wordCount = document.getElementById('wordCount');
+        const rulesList = document.getElementById('rulesList');
+        const quickChecks = document.getElementById('quickChecks');
+        const suggestionsDiv = document.getElementById('suggestions');
+
+        // Render rules
+        rules.forEach((rule, index) => {
+            const ruleItem = document.createElement('div');
+            ruleItem.className = 'rule-item';
+            ruleItem.innerHTML = `<span class="rule-number">${index + 1}.</span>${rule}`;
+            ruleItem.addEventListener('click', () => {
+                document.querySelectorAll('.rule-item').forEach(r => r.classList.remove('active'));
+                ruleItem.classList.add('active');
+            });
+            rulesList.appendChild(ruleItem);
+        });
+
+        textarea.addEventListener('input', analyzeText);
+
+        function analyzeText() {
+            const text = textarea.value;
+            const chars = text.length;
+            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+
+            charCount.textContent = chars;
+            wordCount.textContent = words;
+
+            if (text.trim().length === 0) {
+                resetMetrics();
+                return;
+            }
+
+            // Paragraphs
+            const paragraphs = text.split('\n\n').filter(p => p.trim().length > 0);
+            updateMetric('paragraphMetric', paragraphs.length, 
+                paragraphs.length >= 2 && paragraphs.length <= 8);
+
+            // Sentences
+            const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
+            updateMetric('sentenceMetric', sentences.length, sentences.length >= 3);
+
+            // Verbs and adjectives (simple Russian patterns)
+            const verbPatterns = /\b\w+(ть|ет|ут|ать|ять|ить|ыть|еть|ал|ала|али|ил|ила|или)\b/gi;
+            const adjPatterns = /\b\w+(ый|ая|ое|ые|ий|ья|ье|ьи|ой|ая|ого|ому|ым|ом)\b/gi;
+            
+            const verbs = (text.match(verbPatterns) || []).length;
+            const adjectives = (text.match(adjPatterns) || []).length;
+            
+            const verbPercent = words > 0 ? Math.round((verbs / words) * 100) : 0;
+            const adjPercent = words > 0 ? Math.round((adjectives / words) * 100) : 0;
+
+            updateMetric('verbMetric', verbPercent + '%', verbPercent >= 15);
+            updateMetric('adjectiveMetric', adjPercent + '%', adjPercent <= 15);
+
+            // Quick checks
+            const checks = [];
+            
+            // Check for action start
+            const firstSentence = sentences[0]?.trim() || '';
+            const hasActionStart = /\b\w+(ть|ет|ал|ил|ала|ила|али|или)\b/i.test(firstSentence.slice(0, 50));
+            checks.push({ label: 'Начало с действия', pass: hasActionStart });
+
+            // Check for clichés
+            const hasCancellWords = cancelWords.some(word => 
+                text.toLowerCase().includes(word.toLowerCase())
+            );
+            checks.push({ label: 'Без канцеляризмов', pass: !hasCancellWords });
+
+            // Check paragraph length
+            const avgParagraphWords = paragraphs.length > 0 
+                ? words / paragraphs.length 
+                : 0;
+            checks.push({ label: 'Короткие абзацы', pass: avgParagraphWords <= 50 });
+
+            // Check for sensory words
+            const sensoryWords = ['увидел', 'услышал', 'почувствовал', 'потрогал', 'запах', 'вкус', 'звук', 'цвет'];
+            const hasSensory = sensoryWords.some(word => 
+                text.toLowerCase().includes(word.toLowerCase())
+            );
+            checks.push({ label: 'Органы чувств', pass: hasSensory });
+
+            renderChecks(checks);
+            renderSuggestions(text, checks, hasCancellWords, avgParagraphWords);
+        }
+
+        function updateMetric(id, value, isGood) {
+            const metric = document.getElementById(id);
+            const valueEl = metric.querySelector('.metric-value');
+            valueEl.textContent = value;
+            
+            metric.classList.remove('success', 'warning', 'error');
+            if (typeof isGood === 'boolean') {
+                metric.classList.add(isGood ? 'success' : 'warning');
+            }
+        }
+
+        function resetMetrics() {
+            ['paragraphMetric', 'sentenceMetric', 'verbMetric', 'adjectiveMetric'].forEach(id => {
+                const metric = document.getElementById(id);
+                metric.classList.remove('success', 'warning', 'error');
+                metric.querySelector('.metric-value').textContent = '0';
+            });
+            quickChecks.innerHTML = '';
+            suggestionsDiv.style.display = 'none';
+        }
+
+        function renderChecks(checks) {
+            quickChecks.innerHTML = '';
+            checks.forEach(check => {
+                const badge = document.createElement('div');
+                badge.className = `check-badge ${check.pass ? 'pass' : 'fail'}`;
+                badge.textContent = check.label;
+                quickChecks.appendChild(badge);
+            });
+        }
+
+        function renderSuggestions(text, checks, hasCancellWords, avgParagraphWords) {
+            const suggestions = [];
+
+            if (!checks.find(c => c.label === 'Начало с действия')?.pass) {
+                suggestions.push('Начните с глагола или действия');
+            }
+
+            if (hasCancellWords) {
+                suggestions.push('Упростите канцеляризмы: "осуществлять" → "делать", "является" → убрать');
+            }
+
+            if (avgParagraphWords > 50) {
+                suggestions.push('Разбейте длинные абзацы на 2-3 коротких');
+            }
+
+            if (!checks.find(c => c.label === 'Органы чувств')?.pass) {
+                suggestions.push('Добавьте сенсорики: что видно, слышно, ощущается');
+            }
+
+            if (text.split('\n\n').length < 2) {
+                suggestions.push('Добавьте абзацы для структуры');
+            }
+
+            if (suggestions.length > 0) {
+                suggestionsDiv.style.display = 'block';
+                suggestionsDiv.className = 'suggestions';
+                suggestionsDiv.innerHTML = `
+                    <strong>Рекомендации:</strong>
+                    <ul>${suggestions.map(s => `<li>${s}</li>`).join('')}</ul>
+                `;
+            } else {
+                suggestionsDiv.style.display = 'none';
+            }
+        }
+
+        // Initial state
+        analyzeText();
+    </script>
+</body>
+</html>
